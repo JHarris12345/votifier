@@ -5,6 +5,7 @@ import com.vexsoftware.votifier.VoteHandler;
 import com.vexsoftware.votifier.model.Vote;
 import com.vexsoftware.votifier.net.VotifierSession;
 import com.vexsoftware.votifier.util.GsonInst;
+import com.vexsoftware.votifier.util.VoteLogger;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
@@ -28,7 +29,10 @@ public class VoteInboundHandler extends SimpleChannelInboundHandler<Vote> {
     protected void channelRead0(ChannelHandlerContext ctx, final Vote vote) throws Exception {
         VotifierSession session = ctx.channel().attr(VotifierSession.KEY).get();
 
-        handler.onVoteReceived(vote, session.getVersion(), ctx.channel().remoteAddress().toString());
+        String remoteAddress = ctx.channel().remoteAddress().toString();
+        VoteLogger.log(vote, remoteAddress);
+
+        handler.onVoteReceived(vote, session.getVersion(), remoteAddress);
         session.completeVote();
 
         if (session.getVersion() == VotifierSession.ProtocolVersion.ONE) {
