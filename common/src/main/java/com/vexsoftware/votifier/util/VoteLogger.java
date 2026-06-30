@@ -10,6 +10,7 @@ import java.nio.file.StandardOpenOption;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.TimeZone;
 
 /**
  * Appends every received vote to a monthly log file inside a {@code logs}
@@ -58,8 +59,8 @@ public final class VoteLogger {
                 return;
             }
 
-            ZonedDateTime now = ZonedDateTime.now(ZoneId.systemDefault());
-            File logFile = new File(LOG_DIR, now.format(FILE_FORMAT));
+            ZonedDateTime now = ZonedDateTime.now(TimeZone.getTimeZone("Europe/London").toZoneId());
+            File logFile = new File(LOG_DIR, now.format(FILE_FORMAT) + ".log");
 
             // The voter's IP as reported by the voting service. The actual TCP
             // connection originates from the voting service's server, so this
