@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import com.vexsoftware.votifier.VoteHandler;
 import com.vexsoftware.votifier.model.Vote;
 import com.vexsoftware.votifier.net.VotifierSession;
+import com.vexsoftware.votifier.util.AddressUtil;
 import com.vexsoftware.votifier.util.GsonInst;
 import com.vexsoftware.votifier.util.VoteLogger;
 import io.netty.channel.ChannelFutureListener;
@@ -11,6 +12,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 
+import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicLong;
 
 @ChannelHandler.Sharable
@@ -29,8 +31,10 @@ public class VoteInboundHandler extends SimpleChannelInboundHandler<Vote> {
     protected void channelRead0(ChannelHandlerContext ctx, final Vote vote) throws Exception {
         VotifierSession session = ctx.channel().attr(VotifierSession.KEY).get();
 
-        String remoteAddress = ctx.channel().remoteAddress().toString();
-        VoteLogger.log(vote, remoteAddress);
+        SocketAddress socketAddress = ctx.channel().remoteAddress();
+        String remoteAddress = AddressUtil.formatSocketAddress(socketAddress);
+        String rawRemoteAddress = socketAddress == null ? null : socketAddress.toString();
+        VoteLogger.log(vote, remoteAddress, rawRemoteAddress);
 
         handler.onVoteReceived(vote, session.getVersion(), remoteAddress);
         session.completeVote();
@@ -48,7 +52,7 @@ public class VoteInboundHandler extends SimpleChannelInboundHandler<Vote> {
     public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
         VotifierSession session = ctx.channel().attr(VotifierSession.KEY).get();
 
-        String remoteAddr = ctx.channel().remoteAddress().toString();
+        String remoteAddr = AddressUtil.formatSocketAddress(ctx.channel().remoteAddress());
         boolean hasCompletedVote = session.hasCompletedVote();
 
         if (session.getVersion() == VotifierSession.ProtocolVersion.TWO) {
