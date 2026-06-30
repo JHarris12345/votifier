@@ -44,12 +44,31 @@ public final class VoteLogger {
 
     /**
      * Logs a single vote to the current month's log file.
+     * <p>
+     * Three distinct address values are recorded side-by-side so the source of
+     * each can be judged independently:
+     * <ul>
+     *     <li>{@code voterIP} &ndash; the address the voting <em>website</em>
+     *     placed in the vote payload ({@link Vote#getAddress()}). This is logged
+     *     <strong>exactly</strong> as received; it is whatever the site chose to
+     *     send and is frequently a placeholder ({@code 127.0.0.1}), the server's
+     *     own address, or missing entirely. Votifier never measures this.</li>
+     *     <li>{@code receivedFrom} &ndash; the cleaned IP of the TCP peer that
+     *     actually connected to Votifier (mapped {@code ::ffff:} addresses
+     *     collapsed, port dropped). Behind a proxy/forwarder this is the
+     *     proxy's or localhost's address, not the voter's.</li>
+     *     <li>{@code rawAddress} &ndash; the unmodified socket string for that
+     *     same connection, preserving the port and any IPv6-mapped form, for
+     *     diagnostics.</li>
+     * </ul>
      *
-     * @param vote          the vote that was received
-     * @param remoteAddress the address of the connection that delivered the
-     *                      vote (the vote service's server), may be {@code null}
+     * @param vote             the vote that was received
+     * @param remoteAddress    the cleaned address of the connection that
+     *                         delivered the vote, may be {@code null}
+     * @param rawRemoteAddress the raw, unmodified socket string for the same
+     *                         connection, may be {@code null}
      */
-    public static synchronized void log(Vote vote, String remoteAddress) {
+    public static synchronized void log(Vote vote, String remoteAddress, String rawRemoteAddress) {
         if (vote == null) {
             return;
         }
@@ -62,18 +81,18 @@ public final class VoteLogger {
             ZonedDateTime now = ZonedDateTime.now(TimeZone.getTimeZone("Europe/London").toZoneId());
             File logFile = new File(LOG_DIR, now.format(FILE_FORMAT) + ".log");
 
-            // The voter's IP as reported by the voting service. The actual TCP
-            // connection originates from the voting service's server, so this
-            // (vote.getAddress()) is the closest we can get to the real voter's
-            // IP. We also record the delivering server's address for reference.
+            // voterIP is logged verbatim (whatever the voting site sent);
+            // receivedFrom/rawAddress describe the actual TCP connection.
             String voterAddress = vote.getAddress() == null ? "unknown" : vote.getAddress();
             String sender = remoteAddress == null ? "unknown" : remoteAddress;
+            String rawSender = rawRemoteAddress == null ? "unknown" : rawRemoteAddress;
 
             String line = now.format(LINE_FORMAT)
                     + " | service=" + vote.getServiceName()
                     + " | username=" + vote.getUsername()
                     + " | voterIP=" + voterAddress
                     + " | receivedFrom=" + sender
+                    + " | rawAddress=" + rawSender
                     + " | voteTimestamp=" + vote.getTimeStamp()
                     + System.lineSeparator();
 
